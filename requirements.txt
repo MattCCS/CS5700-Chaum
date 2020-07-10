@@ -1,0 +1,5 @@
+cffi==1.14.0
+cryptography==2.9.2
+pycparser==2.20
+six==1.15.0
+u-msgpack-python==2.6.0
