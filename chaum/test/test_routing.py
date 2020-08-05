@@ -1,37 +1,32 @@
 
-from chaum import config
-from chaum import routing
-from chaum.crypto import key_loading
+from chaum.client import routing as client_routing
+from chaum.common import identity
+from chaum.node import routing as node_routing
 
 
-class Identity(object):
-    """docstring for Identity"""
-
-    def __init__(self, identifier, public_key):
-        super(Identity, self).__init__()
-        self.identifier = identifier
-        self.public_key = public_key
+def deencapsulate_route(data, private_keys):
+    for private_key in private_keys:
+        (next_hop, data) = node_routing.deencapsulate(data, private_key)
+        print(f"Next hop: {next_hop}")
+    return data
 
 
 def test():
-    public_key = key_loading.load_public_key((config.ROOT / "../nodes/s1/keys/s1pubkey").resolve())
-    print(public_key)
+    # Shared activity
+    node_identities = identity.NODES
+    print(node_identities)
 
-    private_key = key_loading.load_private_key((config.ROOT / "../nodes/s1/keys/s1privkey.pem").resolve())
-    print(private_key)
-
-    identities = [
-        Identity("Server A", public_key),
-        Identity("Server B", public_key),
-        Identity("Server C", public_key),
-        Identity("Server D", public_key),
-    ]
-
-    route = routing.random_route(identities, identities[2], length=3)
+    # Client activity
+    route = client_routing.random_route(node_identities, node_identities[2], length=3)
     print(route)
 
-    packet = routing.encapsulate_route(b"WE ATTACK AT DAWN", route)
+    packet = client_routing.encapsulate_route(b"WE ATTACK AT DAWN", route)
     print(packet)
 
-    newtext = routing.deencapsulate_route(packet, private_key)
+    # Server(s) activity
+    _private_keys = [
+        identity.load_private_key(i.identifier)
+        for i in route
+    ]
+    newtext = deencapsulate_route(packet, _private_keys)
     print(newtext)

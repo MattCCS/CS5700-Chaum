@@ -1,3 +1,0 @@
-"""
-A single Mix node.
-"""

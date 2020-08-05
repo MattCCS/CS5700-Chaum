@@ -1,15 +1,14 @@
 
 from chaum import config
 from chaum.crypto import hybrid
-from chaum.crypto import key_loading
+from chaum.crypto import keys
 
 
 def test():
-    print("\tTesting: hybrid")
-    public_key = key_loading.load_public_key((config.ROOT / "../nodes/s1/keys/s1pubkey").resolve())
+    public_key = keys.load_public_key((config.ROOT / "../test-keys/test.pub").resolve())
     print(public_key)
 
-    private_key = key_loading.load_private_key((config.ROOT / "../nodes/s1/keys/s1privkey.pem").resolve())
+    private_key = keys.load_private_key((config.ROOT / "../test-keys/test.priv").resolve())
     print(private_key)
 
     plaintext = b"268"

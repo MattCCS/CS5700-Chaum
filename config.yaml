@@ -1,0 +1,29 @@
+# Chaum network configuration file
+
+# node configs
+# (Address, port, public key.)
+nodes:
+  s1:
+    address: localhost
+    port: 8101
+    public_key: keys/public/s1.pub
+  s2:
+    address: localhost
+    port: 8102
+    public_key: keys/public/s2.pub
+  s3:
+    address: localhost
+    port: 8103
+    public_key: keys/public/s3.pub
+  s4:
+    address: localhost
+    port: 8104
+    public_key: keys/public/s4.pub
+
+# client configs
+# (No address, no port.  Public key optional.)
+clients:
+  c1:
+    public_key: null
+  c2:
+    public_key: null

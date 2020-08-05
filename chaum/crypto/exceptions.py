@@ -1,5 +1,5 @@
 """
-Custom exceptions.
+Custom crypto exceptions.
 """
 
 # key errors
@@ -16,6 +16,7 @@ class IntegrityVerificationFailedException  (Exception): pass  # noqa
 # encryption errors
 class SymmetricEncryptionException          (Exception): pass  # noqa
 class AsymmetricEncryptionException         (Exception): pass  # noqa
+class HybridEncryptionException             (Exception): pass  # noqa
 
-# parsing errors
+# packing errors
 class PacketParseException                  (Exception): pass  # noqa

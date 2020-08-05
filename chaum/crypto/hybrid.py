@@ -5,6 +5,7 @@ Hybrid cryptography functions.
 from chaum.common import packing
 from chaum.crypto import asymmetric
 from chaum.crypto import symmetric
+from chaum.crypto import exceptions
 
 
 def hybrid_encrypt(plaintext, public_key):
@@ -21,13 +22,16 @@ def hybrid_encrypt(plaintext, public_key):
 
 
 def hybrid_decrypt(ciphertext, private_key):
-    (ek_msg, e_msg) = packing.unpack(ciphertext)
+    try:
+        (ek_msg, e_msg) = packing.unpack(ciphertext)
 
-    # Asymmetric decryption of key/IV
-    k_msg = asymmetric.private_key_decrypt(ek_msg, private_key)
-    (key, iv) = packing.unpack(k_msg)
+        # Asymmetric decryption of key/IV
+        k_msg = asymmetric.private_key_decrypt(ek_msg, private_key)
+        (key, iv) = packing.unpack(k_msg)
 
-    # Symmetric decryption of data
-    plaintext = symmetric.decrypt(key, iv, e_msg)
+        # Symmetric decryption of data
+        plaintext = symmetric.decrypt(key, iv, e_msg)
 
-    return plaintext
+        return plaintext
+    except TypeError as exc:
+        raise exceptions.HybridEncryptionException from exc
