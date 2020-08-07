@@ -4,7 +4,7 @@ import socket
 from chaum.common import exceptions
 
 
-DEFAULT_READ_SIZE = 1_000_000
+DEFAULT_READ_SIZE = 65536
 
 
 def bind_socket(port):
@@ -47,3 +47,14 @@ def connect_socket(address, port):
         raise exceptions.ClientSocketException(text)
 
     return client_socket
+
+
+def recv(sock, total=DEFAULT_READ_SIZE):
+    """
+    Source: https://stackoverflow.com/questions/54086025/python-socket-module-recv-data-response-cut-off/54086258
+    """
+    data = list()
+    while True:
+        data.append(sock.recv(2048))
+        if not data[-1]:
+            return b''.join(data)

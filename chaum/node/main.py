@@ -71,7 +71,7 @@ def main():
             print(f"\n[Server: {args.identifier}] Waiting for input...")
             (client_socket, address) = server_socket.accept()
 
-            input_bytes = client_socket.recv(tcp.DEFAULT_READ_SIZE)
+            input_bytes = tcp.recv(client_socket)
             logger.debug(f"input_bytes: {input_bytes}")
 
             unpacked = node.route(input_bytes)

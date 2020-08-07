@@ -46,7 +46,7 @@ def listen(port, self_identity):
         logger.info(f"\t(Raw socket: {address})")
 
         try:
-            input_bytes = client_socket.recv(tcp.DEFAULT_READ_SIZE)
+            input_bytes = tcp.recv(client_socket)
             logger.debug(f"\tRaw bytes: {repr(input_bytes)}")
         except ConnectionResetError as exc:
             logger.debug(exc)
