@@ -39,7 +39,7 @@ def listen(port, self_identity):
             (client_socket, address) = server_socket.accept()
         except socket.timeout:
             if not RUN:
-                logger.debug("[.] Client listen thread ending.")
+                logger.info("[.] Client listen thread ending.")
                 return
             continue
 
@@ -62,7 +62,7 @@ def listen(port, self_identity):
             continue
 
         (sender_info, msg) = packing.unpack(plaintext_bytes)
-        logger.debug(f"sender_info: {sender_info}")
+        logger.info(f"sender_info: {sender_info}")
 
         (sid, saddr, sport) = sender_info
         (msg, fingerprint, signature, spk_bytes) = packing.unpack(msg)
@@ -105,7 +105,7 @@ def stop_thread():
 def forward(addressed_packet):
     (next_hop, packet) = packing.unpack(addressed_packet)
     (_, next_address, next_port) = next_hop
-    logger.debug(f"Next hop: {repr(next_hop)}")
+    logger.info(f"Next hop: {repr(next_hop)}")
 
     client_socket = tcp.connect_socket(next_address, next_port)
     client_socket.send(packet)
@@ -127,7 +127,7 @@ def send_message(msg, sender, destination, dest_addr, dest_port):
 
     # decide on route
     route = routing.random_route(destination)
-    logger.debug(f"route: {repr(route)}")
+    logger.info(f"route: {repr([i.identifier for i in route])}")
 
     # encrypt msg for route
     addressed_packet = routing.encapsulate_route_e2e(msg, route, sender)
