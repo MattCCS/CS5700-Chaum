@@ -26,8 +26,8 @@ class Identity(object):
         self.address = address
         self.port = port
         self.public_key = public_key
-        self.fingerprint = fingerprint.public_key_fingerprint(public_key)
         self.private_key = None
+        self.fingerprint = fingerprint.public_key_fingerprint(public_key)
 
     def __repr__(self):
         return f"<{self.__class__.__name__} {vars(self)}>"

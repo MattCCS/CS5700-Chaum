@@ -3,20 +3,20 @@
 # node configs
 # (Address, port, public key.)
 nodes:
-  # s1:
-  #   address: 10.0.1.5
-  #   port: 8101
-  #   public_key: nodes/s1.pub
-  # s2:
-  #   address: 10.0.1.5
-  #   port: 8102
-  #   public_key: nodes/s2.pub
-  s3:
+  s1:
     address: 10.0.1.8
+    port: 8101
+    public_key: nodes/s1.pub
+  s2:
+    address: 10.0.1.8
+    port: 8102
+    public_key: nodes/s2.pub
+  s3:
+    address: 10.0.1.5
     port: 8103
     public_key: nodes/s3.pub
   s4:
-    address: 10.0.1.8
+    address: 10.0.1.5
     port: 8104
     public_key: nodes/s4.pub
 
@@ -27,3 +27,5 @@ clients:
     public_key: peers/alice.pub
   bob:
     public_key: peers/bob.pub
+  # charlie:
+  #   public_key: peers/charlie.pub

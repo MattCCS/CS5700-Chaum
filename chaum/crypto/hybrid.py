@@ -33,5 +33,5 @@ def hybrid_decrypt(ciphertext, private_key):
         plaintext = symmetric.decrypt(key, iv, e_msg)
 
         return plaintext
-    except (TypeError, exceptions.AsymmetricEncryptionException) as exc:
+    except (TypeError, ValueError, exceptions.AsymmetricEncryptionException) as exc:
         raise exceptions.HybridEncryptionException from exc

@@ -40,8 +40,12 @@ def listen(port, self_identity):
                 return
             continue
 
-        input_bytes = client_socket.recv(tcp.DEFAULT_READ_SIZE)
-        logger.debug(f"\tRaw bytes: {repr(input_bytes)}")
+        try:
+            input_bytes = client_socket.recv(tcp.DEFAULT_READ_SIZE)
+            logger.debug(f"\tRaw bytes: {repr(input_bytes)}")
+        except ConnectionResetError as exc:
+            logger.debug(exc)
+            continue
 
         # try to decrypt
         try:
@@ -63,7 +67,7 @@ def listen(port, self_identity):
             sender_identity = self_identity.fingerprints[fingerprint]
             try:
                 signing.verify(msg, signature, sender_identity.public_key)
-                logger.info(f"\n[+] Sender verified as: {sender_identity.identifier} ({sender_identity.fingerprint})")
+                logger.info(f"[+] Sender verified as: {sender_identity.identifier} ({sender_identity.fingerprint})")
                 verified = True
             except exceptions.SignatureVerificationFailedException as exc:
                 logger.debug(exc)
@@ -78,6 +82,8 @@ def listen(port, self_identity):
             print(line)
         else:
             print(colors.error(line))
+
+        self_identity.seen[sid] = (sid, saddr, sport)
 
         # print("\n[+] New message!")
         # print(f"\tFrom: {sid}@{saddr}:{sport}")
@@ -127,7 +133,7 @@ def handle_send(inp, sender, last=None):
     try:
         (head, msg) = inp.strip().split(maxsplit=1)
     except ValueError:
-        print("\n[-] Couldn't parse fields.")
+        print("\n[-] send: Couldn't parse fields.")
         raise SendError()
 
     try:
@@ -135,8 +141,7 @@ def handle_send(inp, sender, last=None):
         to = (ident, addr, port)
     except ValueError:
         if not last:
-            print("\t[-] Couldn't parse ident/addr/port and no prior recipient!")
-            print("\t[-] Check help for `send` syntax.")
+            print("\t[-] send: Couldn't parse ident/addr/port and no prior recipient!\n\tCheck help for `send` syntax.")
             raise SendError()
         to = last
 
@@ -145,13 +150,13 @@ def handle_send(inp, sender, last=None):
     try:
         dest = sender.peers[ident]
     except KeyError:
-        print(f"\t[!] Couldn't find peer: {repr(ident)}")
+        print(f"\t[!] send: Couldn't find peer: {repr(ident)}")
         raise SendError()
 
     try:
         port = int(port)
     except ValueError:
-        print("\t[!] Port must be a number!")
+        print("\t[!] send: Port must be a number!")
         raise SendError()
 
     form_message(msg, sender, dest, addr, port)
@@ -204,14 +209,17 @@ def load_self_identity(args):
     sender.address = ip.get_lan_ip()
     sender.port = args.port
     sender.private_key = identity.load_private_key(args.identifier)
+
+    # special to clients
     sender.peers = {i.identifier: i for i in identity.load_client_identities()}
     sender.fingerprints = {i.fingerprint: i for i in sender.peers.values()}
+    sender.seen = {}
     return sender
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--identifier", type=str, required=True)
+    parser.add_argument("identifier", type=str)
     parser.add_argument("-p", "--port", type=int, required=True)
     logtools.add_log_parser(parser)
     return parser.parse_args()
