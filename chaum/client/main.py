@@ -64,8 +64,8 @@ def listen(port, self_identity):
         (sender_info, msg) = packing.unpack(plaintext_bytes)
         logger.info(f"sender_info: {sender_info}")
 
-        (sid, saddr, sport) = sender_info
-        (msg, fingerprint, signature, spk_bytes) = packing.unpack(msg)
+        (saddr, sport) = sender_info
+        (msg, sid, fingerprint, signature, spk_bytes) = packing.unpack(msg)
 
         verified = False
         try:
@@ -104,7 +104,7 @@ def stop_thread():
 
 def forward(addressed_packet):
     (next_hop, packet) = packing.unpack(addressed_packet)
-    (_, next_address, next_port) = next_hop
+    (next_address, next_port) = next_hop
     logger.info(f"Next hop: {repr(next_hop)}")
 
     client_socket = tcp.connect_socket(next_address, next_port)
@@ -123,7 +123,7 @@ def send_message(msg, sender, destination, dest_addr, dest_port):
     pkbytes = keys.public_key_bytes(sender.public_key)
     logger.debug(f"msg fingerprint: {repr(sender.fingerprint)}")
     logger.debug(f"msg signature: {repr(signature)}")
-    msg = packing.pack([msg, sender.fingerprint, signature, pkbytes])
+    msg = packing.pack([msg, sender.identifier, sender.fingerprint, signature, pkbytes])
 
     # decide on route
     route = routing.random_route(destination)

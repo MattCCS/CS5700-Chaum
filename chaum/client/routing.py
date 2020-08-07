@@ -20,7 +20,7 @@ def random_route(destination, identities=None, length=None):
 def encapsulate(data, identity):
     # Encrypt and address.
     e_msg = hybrid.hybrid_encrypt(data, identity.public_key) if identity.public_key else data
-    next_hop = [identity.identifier, identity.address, identity.port]
+    next_hop = [identity.address, identity.port]
     return packing.pack([next_hop, e_msg])
 
 

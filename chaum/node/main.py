@@ -37,8 +37,8 @@ class Node:
 
 
 def forward(next_hop, next_packet):
-    (next_name, next_ip, next_port) = next_hop
-    print(f"[Server] Next hop: {next_name}/{next_ip}/{next_port}")
+    (next_ip, next_port) = next_hop
+    print(f"[Server] Next hop: {next_ip}/{next_port}")
     logger.debug(f"Next packet: {next_packet}")
 
     try:
