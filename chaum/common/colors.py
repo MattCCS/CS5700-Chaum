@@ -56,6 +56,10 @@ def yellow(string):
     return _color(string, FG_YELLOW)
 
 
+def white(string):
+    return _color(string, FG_WHITE)
+
+
 def black(string):
     return _color(string, FG_BLACK)
 

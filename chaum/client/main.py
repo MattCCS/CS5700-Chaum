@@ -64,8 +64,12 @@ def listen(port, self_identity):
         (sender_info, msg) = packing.unpack(plaintext_bytes)
         logger.info(f"sender_info: {sender_info}")
 
-        (saddr, sport) = sender_info
-        (msg, sid, fingerprint, signature, spk_bytes) = packing.unpack(msg)
+        (sid, saddr, sport) = sender_info
+        (msg, fingerprint, signature, spk_bytes) = packing.unpack(msg)
+
+        if sid in self_identity.blocked:
+            logger.info(f"\n[-] An unwanted message was blocked.")
+            continue
 
         verified = False
         try:
@@ -123,7 +127,7 @@ def send_message(msg, sender, destination, dest_addr, dest_port):
     pkbytes = keys.public_key_bytes(sender.public_key)
     logger.debug(f"msg fingerprint: {repr(sender.fingerprint)}")
     logger.debug(f"msg signature: {repr(signature)}")
-    msg = packing.pack([msg, sender.identifier, sender.fingerprint, signature, pkbytes])
+    msg = packing.pack([msg, sender.fingerprint, signature, pkbytes])
 
     # decide on route
     route = routing.random_route(destination)
@@ -229,6 +233,58 @@ def handle_remember(inp, sender):
     print(colors.yellow(f"\t[+] Cached info for {ident}."))
 
 
+def handle_block(inp, sender):
+    try:
+        (_, ident) = inp.strip().split(maxsplit=1)
+    except ValueError:
+        print("\n[-] block: Couldn't parse identifier.\n\tCheck help for `block` syntax.")
+        raise CommandError()
+
+    if ident in sender.blocked:
+        print(colors.green(f"\t[+] {ident} is already blocked."))
+        return
+
+    if ident in sender.peers:
+        consent = input(colors.yellow(f"[?] {ident} is in your trusted peers list.\nAre you sure you want to block them? [Y/n] "))
+        if consent != 'Y':
+            print("\t[.] Cancelled block.")
+            return
+
+    sender.blocked.add(ident)
+    print(colors.green(f"\t[+] {ident} has been blocked.  You will no longer see their messages."))
+
+
+def handle_unblock(inp, sender):
+    try:
+        (_, ident) = inp.strip().split(maxsplit=1)
+    except ValueError:
+        print("\n[-] unblock: Couldn't parse identifier.\n\tCheck help for `unblock` syntax.")
+        raise CommandError()
+
+    if ident not in sender.blocked:
+        print(colors.green(f"\t[+] {ident} was already unblocked."))
+        return
+
+    sender.blocked.discard(ident)
+    print(colors.green(f"\t[+] {ident} has been unblocked."))
+
+
+def peer_line(sender, peer):
+    line = f"{peer.identifier}@{peer.address}:{peer.port} ({peer.fingerprint})"
+
+    if peer.identifier in sender.blocked:
+        color = colors.red
+        line += " (BLOCKED)"
+    elif peer.identifier == sender.identifier:
+        color = colors.white
+    elif peer.identifier in sender.seen:
+        color = colors.yellow
+    else:
+        color = colors.green
+
+    return color(line)
+
+
 def cli_loop(sender):
     last = None
 
@@ -245,12 +301,12 @@ def cli_loop(sender):
                 break
             elif inp in ('peer', 'peers', 'friend', 'friends', 'keys'):
                 print(f"\n[*] Listing keys...")
-                print(f"{sender.identifier}@{sender.address}:{sender.port} ({sender.fingerprint})")
+                print(peer_line(sender, sender))
                 print(f"Your peers:")
                 for peer in sender.peers.values():
                     if peer.identifier == sender.identifier:
                         continue
-                    print(f"\t{peer.identifier}@{peer.address}:{peer.port} ({peer.fingerprint})")
+                    print(f"\t{peer_line(sender, peer)}")
             elif inp.startswith("set"):
                 try:
                     handle_set(inp, sender)
@@ -261,6 +317,16 @@ def cli_loop(sender):
                     handle_remember(inp, sender)
                 except CommandError as exc:
                     logger.debug(exc)
+            elif inp.startswith("block"):
+                try:
+                    handle_block(inp, sender)
+                except CommandError as exc:
+                    logger.debug(exc)
+            elif inp.startswith("unblock"):
+                try:
+                    handle_unblock(inp, sender)
+                except CommandError as exc:
+                    logger.debug(exc)
             elif inp.startswith("send"):
                 try:
                     identifier = handle_send(inp, sender, last=last)
@@ -269,26 +335,35 @@ def cli_loop(sender):
                         print(f"\t[*] (Caching new recipient: {last}.)")
                 except CommandError as exc:
                     logger.debug(exc)
-            # elif inp in ('?', 'help'):
-            #     print(f"\n\tCommand format: send <message> ")
             else:
                 print()
                 print("--- COMMANDS ---")
                 print(f"- peers")
                 print(f"\tShows the contact info of yourself and others.")
                 print(f"\t(Updates automatically when you get a message.)")
+                print(f"\tColor code:")
+                print(f"\t\t- {colors.white('you')}")
+                print(f"\t\t- {colors.green('trusted peer')}")
+                print(f"\t\t- {colors.yellow('untrusted peer')}")
+                print(f"\t\t- {colors.red('(blocked)')}")
+
+                print(f"- set <identifier> <address> <port>")
+                print(f"\tUpdates the contact information for the identifier.")
+
+                print(f"- send[:identifier] <message>")
+                print(f"\tSend a message to the given contact.")
+                print(f"\t`send` will remember the last person you spoke to.")
+                print(f"\t(Requires the recipient's info to be set with `peers`.)")
+
+                print(f"- remember <identifier>")
+                print(f"\tAdds the given identifier to your peers list.")
+                print(f"\t(Allows you to securely talk to new people.)")
 
                 print(f"- last")
                 print(f"\tShows the last person you spoke to.")
 
-                print(f"- send")
-                print(f"\tUsage: send[:name] <message>")
-                print(f"\t`send` will remember the last person you spoke to.")
-                print(f"\tRequires the recipient's info to be set with `peers`.")
-
-                print(f"- set")
-                print(f"\tUsage: set <identifier> <address> <port>")
-                print(f"\tUpdates the contact information for the identifier.")
+                print(f"- block/unblock <identifier>")
+                print(f"\tBlock/unblock the given contact.")
 
     except KeyboardInterrupt:
         print(f"\n[.] User cancelled.")
@@ -305,6 +380,7 @@ def load_self_identity(args):
     sender.peers[sender.identifier] = sender  # set pointer
     sender.fingerprints = {i.fingerprint: i for i in sender.peers.values()}
     sender.seen = {}
+    sender.blocked = set()
     return sender
 
 
