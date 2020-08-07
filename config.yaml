@@ -12,11 +12,11 @@ nodes:
     port: 8102
     public_key: public/s2.pub
   s3:
-    address: 10.0.1.5
+    address: 10.0.1.8
     port: 8103
     public_key: public/s3.pub
   s4:
-    address: 10.0.1.5
+    address: 10.0.1.8
     port: 8104
     public_key: public/s4.pub
   # donor:

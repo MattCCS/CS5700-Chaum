@@ -13,7 +13,7 @@ def random_route(destination, identities=None, length=None):
     if identities is None:
         identities = list(identity_module.get_public_nodes().values())
     if length is None:
-        length = len(identities)
+        length = len(identities) // 2
     return random.sample(identities, k=length) + [destination]
 
 

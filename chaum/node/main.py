@@ -6,6 +6,7 @@ import argparse
 import traceback
 
 from chaum.node import routing
+from chaum.common import colors
 from chaum.common import exceptions
 from chaum.common import identity
 from chaum.common import logtools
@@ -53,6 +54,7 @@ def forward(next_hop, next_packet):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("identifier", type=str, help="(Example: 'server1')")
+    parser.add_argument("-m", "--malicious", action="store_true", default=False)
     logtools.add_log_parser(parser)
     return parser.parse_args()
 
@@ -64,6 +66,9 @@ def main():
     node = Node(identity.load_private_key(args.identifier))
 
     server_socket = tcp.bind_socket(node_identity.port)
+
+    if args.malicious:
+        print(colors.yellow(f"[Server] Malicious mode!"))
 
     try:
         while True:
@@ -80,7 +85,11 @@ def main():
                 continue
 
             (next_hop, next_packet) = unpacked
-            forward(next_hop, next_packet)
+
+            if not args.malicious:
+                forward(next_hop, next_packet)
+            else:
+                print(colors.yellow(f"[*] Dropping packet! >:)"))
 
     except KeyboardInterrupt:
         print("[Server] User cancelling...")
