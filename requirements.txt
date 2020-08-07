@@ -1,8 +1,7 @@
-cffi==1.14.0
-coloredlogs==14.0
-cryptography==2.9.2
-humanfriendly==8.2
+cffi==1.14.1
+cryptography==3.0
+msgpack-python==0.5.6
 pycparser==2.20
 PyYAML==5.3.1
 six==1.15.0
-u-msgpack-python==2.6.0
+umsgpack==0.1.0

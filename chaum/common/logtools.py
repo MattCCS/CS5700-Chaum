@@ -4,8 +4,6 @@ Useful logging utilities.
 
 import logging
 
-import coloredlogs
-
 
 LOGGER_NAME_PREFIX = "mattccs"
 LOG_FORMAT = "%(asctime)s - %(levelname)s - %(name)s - %(filename)s:%(lineno)s - %(funcName)s() - %(message)s"
@@ -14,7 +12,6 @@ DEFAULT_LOG_LEVEL = "WARNING"
 
 
 logging.basicConfig(format=LOG_FORMAT)
-# coloredlogs.install()
 
 
 __all__ = [

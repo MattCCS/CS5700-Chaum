@@ -6,26 +6,30 @@ nodes:
   s1:
     address: 10.0.1.8
     port: 8101
-    public_key: nodes/s1.pub
+    public_key: public/s1.pub
   s2:
     address: 10.0.1.8
     port: 8102
-    public_key: nodes/s2.pub
+    public_key: public/s2.pub
   s3:
     address: 10.0.1.5
     port: 8103
-    public_key: nodes/s3.pub
+    public_key: public/s3.pub
   s4:
     address: 10.0.1.5
     port: 8104
-    public_key: nodes/s4.pub
+    public_key: public/s4.pub
+  # donor:
+  #   address: 10.0.1.8
+  #   port: 1301
+  #   public_key: public/alice.pub
 
 # client configs
 # (public key.)
 clients:
   alice:
-    public_key: peers/alice.pub
+    public_key: public/alice.pub
   bob:
-    public_key: peers/bob.pub
+    public_key: public/bob.pub
   # charlie:
-  #   public_key: peers/charlie.pub
+  #   public_key: public/charlie.pub

@@ -9,8 +9,6 @@ from chaum.crypto import keys
 
 logger = logtools.new_logger(__loader__.name)
 KEYS_PATH = config.ROOT.parent / "keys"
-NODE_KEYS_PATH = (KEYS_PATH / "nodes")
-PEER_KEYS_PATH = (KEYS_PATH / "peers")
 PRIVATE_KEYS_PATH = (KEYS_PATH / "private")
 
 PUBLIC_NODES = None
@@ -33,27 +31,37 @@ class Identity(object):
 
 
 def load_node_identities():
-    identifiers = config.load("nodes").keys()
+    identifiers = config.load_safe("nodes").keys()
     for identifier in identifiers:
         yield load_node_identity(identifier)
 
 
 def load_node_identity(identifier):
     logger.info(f"Loading identifier: {identifier}")
-    identity_data = config.load("nodes")[identifier]
+    node_identities = config.load_safe("nodes")
+    try:
+        identity_data = node_identities[identifier]
+    except KeyError:
+        logger.critical(f"[!] Configuration for node {repr(identifier)} not found!\nChoose from: {list(node_identities.keys())}\n")
+        config.exit_with_generic_warning()
     (address, port) = (identity_data["address"], identity_data["port"])
     return Identity(identifier, address, port, public_key=load_public_key(identifier, identity_data))
 
 
 def load_client_identities():
-    identifiers = config.load("clients").keys()
+    identifiers = config.load_safe("clients").keys()
     for identifier in identifiers:
         yield load_client_identity(identifier)
 
 
 def load_client_identity(identifier):
     logger.info(f"[ ] Loading client: {identifier}")
-    identity_data = config.load("clients")[identifier]
+    client_identities = config.load_safe("clients")
+    try:
+        identity_data = client_identities[identifier]
+    except KeyError:
+        logger.critical(f"[!] Configuration for client {repr(identifier)} not found!\nChoose from: {list(client_identities.keys())}\n")
+        config.exit_with_generic_warning()
     public_key_path = identity_data["public_key"]
     return Identity(identifier, None, None, load_public_key_rel(public_key_path))
 

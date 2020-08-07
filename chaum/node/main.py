@@ -60,7 +60,7 @@ def parse_args():
 def main():
     args = parse_args()
 
-    node_identity = identity.get_public_nodes()[args.identifier]
+    node_identity = identity.load_node_identity(args.identifier)
     node = Node(identity.load_private_key(args.identifier))
 
     server_socket = tcp.bind_socket(node_identity.port)

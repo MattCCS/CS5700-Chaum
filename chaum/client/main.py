@@ -1,5 +1,5 @@
 """
-Start a single client.
+Start a single Mix client.
 """
 
 import argparse
