@@ -27,7 +27,6 @@ class Node:
             (next_hop, next_packet) = self._route(packet)
         except Exception as exc:
             logger.error(f"[!] Unexpected exception while routing: {exc}")
-            print(repr(exc))
             traceback.print_exc()
             logger.debug(traceback.format_exc())
             return None
