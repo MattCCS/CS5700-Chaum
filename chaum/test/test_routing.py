@@ -13,11 +13,11 @@ def deencapsulate_route(data, private_keys):
 
 def test():
     # Shared activity
-    node_identities = identity.NODES
+    node_identities = identity.get_public_nodes().values()
     print(node_identities)
 
     # Client activity
-    route = client_routing.random_route(node_identities, node_identities[2], length=3)
+    route = client_routing.random_route(node_identities, identities=node_identities[2], length=3)
     print(route)
 
     packet = client_routing.encapsulate_route(b"WE ATTACK AT DAWN", route)

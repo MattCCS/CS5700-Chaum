@@ -9,7 +9,11 @@ from chaum.common import packing
 from chaum.crypto import hybrid
 
 
-def random_route(destination, identities=identity_module.NODES, length=3):
+def random_route(destination, identities=None, length=None):
+    if identities is None:
+        identities = list(identity_module.get_public_nodes().values())
+    if length is None:
+        length = len(identities)
     return random.sample(identities, k=length) + [destination]
 
 

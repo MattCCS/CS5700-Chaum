@@ -3,27 +3,27 @@
 # node configs
 # (Address, port, public key.)
 nodes:
-  s1:
-    address: localhost
-    port: 8101
-    public_key: keys/public/s1.pub
-  s2:
-    address: localhost
-    port: 8102
-    public_key: keys/public/s2.pub
+  # s1:
+  #   address: 10.0.1.5
+  #   port: 8101
+  #   public_key: nodes/s1.pub
+  # s2:
+  #   address: 10.0.1.5
+  #   port: 8102
+  #   public_key: nodes/s2.pub
   s3:
-    address: localhost
+    address: 10.0.1.8
     port: 8103
-    public_key: keys/public/s3.pub
+    public_key: nodes/s3.pub
   s4:
-    address: localhost
+    address: 10.0.1.8
     port: 8104
-    public_key: keys/public/s4.pub
+    public_key: nodes/s4.pub
 
 # client configs
-# (No address, no port.  Public key optional.)
+# (public key.)
 clients:
-  c1:
-    public_key: null
-  c2:
-    public_key: null
+  alice:
+    public_key: peers/alice.pub
+  bob:
+    public_key: peers/bob.pub

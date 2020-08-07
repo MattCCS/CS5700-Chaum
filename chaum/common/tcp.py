@@ -4,7 +4,7 @@ import socket
 from chaum.common import exceptions
 
 
-DEFAULT_READ_SIZE = 8192
+DEFAULT_READ_SIZE = 65536
 
 
 def bind_socket(port):
