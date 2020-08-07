@@ -14,7 +14,7 @@ DEFAULT_LOG_LEVEL = "WARNING"
 
 
 logging.basicConfig(format=LOG_FORMAT)
-coloredlogs.install()
+# coloredlogs.install()
 
 
 __all__ = [

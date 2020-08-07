@@ -69,3 +69,15 @@ def load_public_key_bytes(pub_key_bytes):
         raise exceptions.PublicKeyParseException(err)
     except IOError as err:
         raise exceptions.PublicKeyNotFoundException(err)
+
+
+def public_key_bytes(public_key):
+    """
+    Returns the raw bytes of the given public key.
+
+    + produces public key (public)
+    """
+    return public_key.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    )

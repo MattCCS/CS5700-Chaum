@@ -27,6 +27,8 @@ class Node:
             (next_hop, next_packet) = self._route(packet)
         except Exception as exc:
             logger.error(f"[!] Unexpected exception while routing: {exc}")
+            print(repr(exc))
+            traceback.print_exc()
             logger.debug(traceback.format_exc())
             return None
         return (next_hop, next_packet)
@@ -66,10 +68,11 @@ def main():
 
     try:
         while True:
-            print(f"[Server: {args.identifier}] Waiting for input...")
+            print(f"\n[Server: {args.identifier}] Waiting for input...")
             (client_socket, address) = server_socket.accept()
 
             input_bytes = client_socket.recv(tcp.DEFAULT_READ_SIZE)
+            logger.debug(f"input_bytes: {input_bytes}")
 
             unpacked = node.route(input_bytes)
             logger.debug(f"Unpacked: {repr(unpacked)}")

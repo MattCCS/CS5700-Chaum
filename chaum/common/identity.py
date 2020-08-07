@@ -20,7 +20,6 @@ class Identity(object):
     """docstring for Identity"""
 
     def __init__(self, identifier, address, port, public_key=None):
-        assert public_key
         super(Identity, self).__init__()
         self.identifier = identifier
         self.address = address

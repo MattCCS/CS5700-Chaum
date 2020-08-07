@@ -16,6 +16,7 @@ from chaum.common import packing
 from chaum.common import tcp
 from chaum.crypto import exceptions
 from chaum.crypto import hybrid
+from chaum.crypto import keys
 from chaum.crypto import signing
 
 
@@ -23,12 +24,14 @@ logger = logtools.new_logger(__loader__.name)
 RUN = True
 
 
-class SendError(Exception): pass  # noqa
+class CommandError(Exception): pass  # noqa
 
 
 def listen(port, self_identity):
     server_socket = tcp.bind_socket(port)
     server_socket.settimeout(0.25)
+    port = server_socket.getsockname()[1]
+    self_identity.port = port
     print(f"[*] Awaiting incoming messages on port {port}...")
 
     while True:
@@ -39,6 +42,8 @@ def listen(port, self_identity):
                 logger.debug("[.] Client listen thread ending.")
                 return
             continue
+
+        logger.info(f"\t(Raw socket: {address})")
 
         try:
             input_bytes = client_socket.recv(tcp.DEFAULT_READ_SIZE)
@@ -60,7 +65,7 @@ def listen(port, self_identity):
         logger.debug(f"sender_info: {sender_info}")
 
         (sid, saddr, sport) = sender_info
-        (msg, fingerprint, signature) = packing.unpack(msg)
+        (msg, fingerprint, signature, spk_bytes) = packing.unpack(msg)
 
         verified = False
         try:
@@ -73,22 +78,23 @@ def listen(port, self_identity):
                 logger.debug(exc)
                 logger.error("\n[!] Sender signature verification failed!  This could be an attack!")
         except KeyError:
-            logger.error("\n[!] Sender fingerprint not found!  Identity cannot be verified!")
+            print(colors.red("\n[!] Sender fingerprint not found!  Identity cannot be verified!"))
 
         msg = msg.decode("utf-8")
         line = f"[{sid}@{saddr}:{sport}] {sid} says: \"{msg}\""
 
         if verified:
-            print(line)
+            if sid in self_identity.seen:
+                print(colors.yellow(line))
+            else:
+                print(colors.green(line))
         else:
-            print(colors.error(line))
+            print(colors.yellow(line))
+            self_identity.seen[sid] = (saddr, sport, spk_bytes)
 
-        self_identity.seen[sid] = (sid, saddr, sport)
-
-        # print("\n[+] New message!")
-        # print(f"\tFrom: {sid}@{saddr}:{sport}")
-        # print(f"\tMessage: {msg}")
-        logger.info(f"\t(Raw socket: {address})")
+        if verified:
+            sender_identity.address = saddr
+            sender_identity.port = sport
 
 
 def stop_thread():
@@ -106,7 +112,7 @@ def forward(addressed_packet):
     client_socket.close()
 
 
-def form_message(msg, sender, destination, dest_addr, dest_port):
+def send_message(msg, sender, destination, dest_addr, dest_port):
     destination.address = dest_addr
     destination.port = dest_port
 
@@ -114,9 +120,10 @@ def form_message(msg, sender, destination, dest_addr, dest_port):
 
     # sign msg
     signature = signing.sign(msg, sender.private_key)
+    pkbytes = keys.public_key_bytes(sender.public_key)
     logger.debug(f"msg fingerprint: {repr(sender.fingerprint)}")
     logger.debug(f"msg signature: {repr(signature)}")
-    msg = packing.pack([msg, sender.fingerprint, signature])
+    msg = packing.pack([msg, sender.fingerprint, signature, pkbytes])
 
     # decide on route
     route = routing.random_route(destination)
@@ -129,40 +136,97 @@ def form_message(msg, sender, destination, dest_addr, dest_port):
     forward(addressed_packet)
 
 
+def handle_set(inp, sender):
+    try:
+        (_, ident, addr, port) = inp.strip().split(maxsplit=3)
+    except ValueError:
+        print("\n[-] set: Couldn't parse ident/addr/port.\n\tCheck help for `set` syntax.")
+        raise CommandError()
+
+    if ident not in sender.peers:
+        print(f"\n[-] set: Peer unknown: {ident}")
+        raise CommandError()
+
+    try:
+        port = int(port)
+    except ValueError:
+        print(f"\n[-] set: Port must be an int, got: {port}")
+        raise CommandError()
+
+    sender.peers[ident].address = addr
+    sender.peers[ident].port = port
+    print(colors.green(f"\t[+] Updated info for {ident}."))
+
+
 def handle_send(inp, sender, last=None):
     try:
         (head, msg) = inp.strip().split(maxsplit=1)
     except ValueError:
         print("\n[-] send: Couldn't parse fields.")
-        raise SendError()
+        raise CommandError()
 
     try:
-        (_, ident, addr, port) = head.split(":")
-        to = (ident, addr, port)
+        (_, ident) = head.split(":", 1)
     except ValueError:
         if not last:
-            print("\t[-] send: Couldn't parse ident/addr/port and no prior recipient!\n\tCheck help for `send` syntax.")
-            raise SendError()
-        to = last
-
-    (ident, addr, port) = to
+            print("\t[-] send: Couldn't parse identifier and no prior recipient!\n\tCheck help for `send` syntax.")
+            raise CommandError()
+        ident = last
 
     try:
         dest = sender.peers[ident]
     except KeyError:
         print(f"\t[!] send: Couldn't find peer: {repr(ident)}")
-        raise SendError()
+        raise CommandError()
+
+    addr = dest.address
+    port = dest.port
+
+    if None in (port, addr):
+        print(colors.yellow(f"\t[!] Contact info for {ident} is unknown!\n\tUpdate it with the `set` command."))
+        raise CommandError()
 
     try:
         port = int(port)
-    except ValueError:
+    except Exception:
         print("\t[!] send: Port must be a number!")
-        raise SendError()
+        raise CommandError()
 
-    form_message(msg, sender, dest, addr, port)
-    print(f"\t[+] Message sent to {ident}@{addr}:{port}.")
+    try:
+        send_message(msg, sender, dest, addr, port)
+        print(f"\t[+] Message sent to {ident}@{addr}:{port}.")
+    except Exception as exc:
+        print(f"\t[!] Message failed to send!  Maybe the first node is down?")
+        logger.error(exc)
+        raise CommandError(exc)
 
-    return (ident, addr, port)
+    return ident
+
+
+def handle_remember(inp, sender):
+    try:
+        (_, ident) = inp.strip().split(maxsplit=1)
+    except ValueError:
+        print("\n[-] remember: Couldn't parse identifier.\n\tCheck help for `remember` syntax.")
+        raise CommandError()
+
+    if ident in sender.peers:
+        print(f"\n[-] remember: Peer already known: {ident}")
+        raise CommandError()
+
+    try:
+        (addr, port, pk_bytes) = sender.seen[ident]
+    except KeyError:
+        print(f"\t[!] remember: Couldn't find contact: {repr(ident)}")
+        raise CommandError()
+
+    public_key = keys.load_public_key_bytes(pk_bytes)
+
+    cached_ident = identity.Identity(ident, addr, port, public_key=public_key)
+    sender.peers[ident] = cached_ident
+    sender.fingerprints[cached_ident.fingerprint] = cached_ident
+
+    print(colors.yellow(f"\t[+] Cached info for {ident}."))
 
 
 def cli_loop(sender):
@@ -181,25 +245,51 @@ def cli_loop(sender):
                 break
             elif inp in ('peer', 'peers', 'friend', 'friends', 'keys'):
                 print(f"\n[*] Listing keys...")
-                print(f"You:")
-                print(f"\t{sender.identifier}@{sender.address}:{sender.port} ({sender.fingerprint})")
+                print(f"{sender.identifier}@{sender.address}:{sender.port} ({sender.fingerprint})")
                 print(f"Your peers:")
-                for peer in sender.peers:
+                for peer in sender.peers.values():
+                    if peer.identifier == sender.identifier:
+                        continue
                     print(f"\t{peer.identifier}@{peer.address}:{peer.port} ({peer.fingerprint})")
+            elif inp.startswith("set"):
+                try:
+                    handle_set(inp, sender)
+                except CommandError as exc:
+                    logger.debug(exc)
+            elif inp.startswith("remember"):
+                try:
+                    handle_remember(inp, sender)
+                except CommandError as exc:
+                    logger.debug(exc)
             elif inp.startswith("send"):
                 try:
-                    (ident, addr, port) = handle_send(inp, sender, last=last)
-                    if last != (ident, addr, port):
-                        last = (ident, addr, port)
-                        print(f"\t[*] (Caching new recipient: {ident}:{addr}:{port}.")
-                except SendError as exc:
+                    identifier = handle_send(inp, sender, last=last)
+                    if last != identifier:
+                        last = identifier
+                        print(f"\t[*] (Caching new recipient: {last}.)")
+                except CommandError as exc:
                     logger.debug(exc)
             # elif inp in ('?', 'help'):
             #     print(f"\n\tCommand format: send <message> ")
             else:
-                print(f"\n\tCommand: last")
-                print(f"\tCommand: peers")
-                print(f"\tCommand format: send[:ident:addr:port] <message>")
+                print()
+                print("--- COMMANDS ---")
+                print(f"- peers")
+                print(f"\tShows the contact info of yourself and others.")
+                print(f"\t(Updates automatically when you get a message.)")
+
+                print(f"- last")
+                print(f"\tShows the last person you spoke to.")
+
+                print(f"- send")
+                print(f"\tUsage: send[:name] <message>")
+                print(f"\t`send` will remember the last person you spoke to.")
+                print(f"\tRequires the recipient's info to be set with `peers`.")
+
+                print(f"- set")
+                print(f"\tUsage: set <identifier> <address> <port>")
+                print(f"\tUpdates the contact information for the identifier.")
+
     except KeyboardInterrupt:
         print(f"\n[.] User cancelled.")
 
@@ -212,6 +302,7 @@ def load_self_identity(args):
 
     # special to clients
     sender.peers = {i.identifier: i for i in identity.load_client_identities()}
+    sender.peers[sender.identifier] = sender  # set pointer
     sender.fingerprints = {i.fingerprint: i for i in sender.peers.values()}
     sender.seen = {}
     return sender
@@ -220,7 +311,7 @@ def load_self_identity(args):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("identifier", type=str)
-    parser.add_argument("-p", "--port", type=int, required=True)
+    parser.add_argument("-p", "--port", type=int, default=0)
     logtools.add_log_parser(parser)
     return parser.parse_args()
 
