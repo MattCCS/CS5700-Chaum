@@ -2,7 +2,7 @@
 import base64
 import struct
 
-import umsgpack
+import msgpack
 
 
 DELIMITER = b":"
@@ -33,8 +33,8 @@ def unpack_fast(packed):
 
 
 def pack(parts):
-    return umsgpack.packb(parts)
+    return msgpack.packb(parts)
 
 
 def unpack(packed):
-    return umsgpack.unpackb(packed)
+    return msgpack.unpackb(packed)
